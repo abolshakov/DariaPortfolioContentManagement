@@ -22,6 +22,7 @@ namespace ContentManagement
         public int Id { get; set; }
 
         [JsonProperty("title")]
+		[DefaultValue("")]
         public string Title
         {
             get => _title;
@@ -29,6 +30,7 @@ namespace ContentManagement
         }
 
         [JsonProperty("image")]
+        [DefaultValue("")]
         [Editor(typeof(ImagePicker), typeof(UITypeEditor))]
         [TypeConverter(typeof(DummyConverter))]
         public string Image
@@ -38,6 +40,7 @@ namespace ContentManagement
         }
 
         [JsonProperty("description")]
+        [DefaultValue("")]
         public string Description
         {
             get => _description;

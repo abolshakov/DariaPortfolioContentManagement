@@ -2,3 +2,5 @@
 /ContentManagement/*.user
 obj
 bin
+packages
+/ContentManagement.sln.DotSettings.user

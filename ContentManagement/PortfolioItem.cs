@@ -9,6 +9,7 @@ namespace ContentManagement
         private string _image;
         private string _description;
         private string _url;
+        private string _video;
 
         public PortfolioItem()
         {
@@ -20,6 +21,7 @@ namespace ContentManagement
         public int Id { get; set; }
 
         [JsonProperty("image")]
+        [DefaultValue("")]
         [Editor(typeof(ImagePicker), typeof(UITypeEditor))]
         [TypeConverter(typeof(DummyConverter))]
         public string Image
@@ -29,6 +31,7 @@ namespace ContentManagement
         }
 
         [JsonProperty("description")]
+        [DefaultValue("")]
         public string Description
         {
             get => _description;
@@ -36,10 +39,19 @@ namespace ContentManagement
         }
 
         [JsonProperty("url")]
+        [DefaultValue("")]
         public string Url
         {
             get => _url;
             set => _url = value?.Trim();
+        }
+
+        [JsonProperty("video")]
+        [DefaultValue("")]
+        public string Video
+        {
+	        get => _video;
+	        set => _video = value?.Trim();
         }
 
         [JsonIgnore]

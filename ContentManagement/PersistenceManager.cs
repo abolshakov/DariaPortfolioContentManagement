@@ -56,6 +56,7 @@ namespace ContentManagement
 
 				var serializer = JsonSerializer.CreateDefault();
 				serializer.NullValueHandling = NullValueHandling.Ignore;
+				serializer.DefaultValueHandling = DefaultValueHandling.Ignore;
 				serializer.Formatting = Formatting.Indented;
 				serializer.Serialize(jsonWriter, portfolio.PreviewItems);
 
@@ -90,15 +91,17 @@ namespace ContentManagement
 			if (string.IsNullOrEmpty(sourcePath))
 				return null;
 
-			string subfolder, fileName;
+			string subfolder, fileName, currentImage;
 
 			if (item is PreviewItem previewItem)
 			{
+				currentImage = previewItem.Image;
 				subfolder = string.Empty;
 				fileName = CreateFileNameWithoutExtension(previewItem);
 			}
 			else if (item is PortfolioItem portfolioItem)
 			{
+				currentImage = portfolioItem.Image;
 				subfolder = EvaluateOrCreateChildFolderName(portfolioItem.Parent);
 				fileName = CreateFileNameWithoutExtension(portfolioItem);
 			}
@@ -107,6 +110,10 @@ namespace ContentManagement
 				return string.Empty;
 			}
 
+			if (!string.IsNullOrEmpty(currentImage))
+			{
+				DeleteImage(currentImage);
+			}
 			fileName += Path.GetExtension(sourcePath);
 			var target = Path.Combine(ImagesPath, subfolder, fileName);
 			File.Copy(sourcePath, target, true);
@@ -184,6 +191,13 @@ namespace ContentManagement
 			  : portfolioItem.Description.ToHyphenCase();
 		}
 
+		private static string EvaluateChildFolderName(PreviewItem previewItem)
+		{
+			var image = previewItem.PortfolioItems?.FirstOrDefault(x=>!string.IsNullOrEmpty(x.Image))?.Image;
+
+			return image?.Substring(0, image.IndexOf('/'));
+		}
+
 		private static string RenameImage(string oldFileName, string subfolder, string newFileNameWithoutExtension)
 		{
 			var oldPath = Path.Combine(ImagesPath, oldFileName);
@@ -193,16 +207,6 @@ namespace ContentManagement
 			File.Move(oldPath, newPath);
 
 			return CreateImageName(subfolder, fileName);
-		}
-
-		private static string EvaluateChildFolderName(PreviewItem previewItem)
-		{
-			if (previewItem.PortfolioItems == null || previewItem.PortfolioItems.All(x => string.IsNullOrEmpty(x.Image)))
-				return null;
-
-			var image = previewItem.PortfolioItems.First().Image;
-
-			return image.Substring(0, image.IndexOf('/'));
 		}
 
 		private static string CreateChildFolderName(PreviewItem previewItem)
