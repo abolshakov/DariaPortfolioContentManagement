@@ -60,7 +60,7 @@ namespace ContentManagement
 				serializer.Formatting = Formatting.Indented;
 				serializer.Serialize(jsonWriter, portfolio.PreviewItems);
 
-				content = $"export const PREVIEW_ITEMS = {textWriter};";
+				content = $"export const PREVIEW_ITEMS = {textWriter};\n";
 			}
 
 			File.WriteAllText(ItemsPath, content);
