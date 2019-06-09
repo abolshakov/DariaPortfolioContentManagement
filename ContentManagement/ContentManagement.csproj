@@ -62,6 +62,7 @@
     <Compile Include="IImageOwner.cs" />
     <Compile Include="ImagePicker.cs" />
     <Compile Include="MarginConverter.cs" />
+    <Compile Include="MultilineStringEditor.cs" />
     <Compile Include="PersistenceManager.cs" />
     <Compile Include="Portfolio.cs" />
     <Compile Include="MainForm.cs">

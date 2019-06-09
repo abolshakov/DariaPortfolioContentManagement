@@ -44,6 +44,7 @@ namespace ContentManagement
 
         [JsonProperty("description")]
         [DefaultValue("")]
+        [Editor(typeof(MultilineStringEditor), typeof(UITypeEditor))]
         public string Description
         {
             get => _description;

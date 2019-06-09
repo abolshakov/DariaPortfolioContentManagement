@@ -198,7 +198,7 @@ namespace ContentManagement
             this.horizontalSplitter.Panel2.Padding = new System.Windows.Forms.Padding(0, 0, 0, 3);
             this.horizontalSplitter.Panel2MinSize = 300;
             this.horizontalSplitter.Size = new System.Drawing.Size(457, 558);
-            this.horizontalSplitter.SplitterDistance = 90;
+            this.horizontalSplitter.SplitterDistance = 110;
             this.horizontalSplitter.TabIndex = 2;
             // 
             // propertyGrid
@@ -208,7 +208,7 @@ namespace ContentManagement
             this.propertyGrid.Location = new System.Drawing.Point(0, 3);
             this.propertyGrid.Name = "propertyGrid";
             this.propertyGrid.PropertySort = System.Windows.Forms.PropertySort.NoSort;
-            this.propertyGrid.Size = new System.Drawing.Size(457, 87);
+            this.propertyGrid.Size = new System.Drawing.Size(457, 107);
             this.propertyGrid.TabIndex = 0;
             this.propertyGrid.ToolbarVisible = false;
             this.propertyGrid.PropertyValueChanged += new System.Windows.Forms.PropertyValueChangedEventHandler(this.PropertyGrid_PropertyValueChanged);
@@ -218,7 +218,7 @@ namespace ContentManagement
             this.pictureBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pictureBox.Location = new System.Drawing.Point(0, 0);
             this.pictureBox.Name = "pictureBox";
-            this.pictureBox.Size = new System.Drawing.Size(457, 461);
+            this.pictureBox.Size = new System.Drawing.Size(457, 441);
             this.pictureBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
             this.pictureBox.TabIndex = 1;
             this.pictureBox.TabStop = false;
