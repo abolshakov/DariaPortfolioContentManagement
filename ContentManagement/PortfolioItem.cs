@@ -4,11 +4,9 @@ using Newtonsoft.Json;
 
 namespace ContentManagement
 {
-    internal class PortfolioItem: IImageOwner
+	internal class PortfolioItem: IImageOwner
     {
-	    
-
-        private string _image;
+	    private string _image;
         private string _margin;
         private string _description;
         private string _url;

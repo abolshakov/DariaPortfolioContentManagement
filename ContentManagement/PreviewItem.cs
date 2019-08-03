@@ -2,9 +2,18 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing.Design;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace ContentManagement
 {
+    public enum Category
+    {
+        Animation,
+        Concept,
+        Illustration,
+        Undefined
+    }
+
     internal class PreviewItem: IImageOwner
     {
         private string _title;
@@ -14,6 +23,7 @@ namespace ContentManagement
         public PreviewItem()
         {
             Id = PersistenceManager.NextId;
+            Category = Category.Undefined;
             PortfolioItems = new List<PortfolioItem>();
         }
 
@@ -22,7 +32,7 @@ namespace ContentManagement
         public int Id { get; set; }
 
         [JsonProperty("title")]
-		[DefaultValue("")]
+        [DefaultValue("")]
         public string Title
         {
             get => _title;
@@ -46,6 +56,11 @@ namespace ContentManagement
             get => _description;
             set => _description = value?.Trim();
         }
+
+        [JsonProperty("category")]
+        [JsonConverter(typeof(StringEnumConverter))]
+        [DefaultValue(Category.Undefined)]
+        public Category Category { get; set; }
 
         [JsonProperty("portfolioItems")]
         [Browsable(false)]
