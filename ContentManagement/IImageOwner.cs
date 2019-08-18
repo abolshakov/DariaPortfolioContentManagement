@@ -1,9 +1,7 @@
 namespace ContentManagement
 {
-    internal interface IImageOwner
+    internal interface IImageOwner: IUnique
     {
-        int Id { get; set; }
-
         string Image { get; set; }
     }
 }

@@ -1,25 +1,54 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing.Design;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace ContentManagement
 {
-	internal class PortfolioItem: IImageOwner
+    public enum Category
     {
-	    private string _image;
-        private string _margin;
+        Animation,
+        Concept,
+        Illustration,
+        Undefined
+    }
+
+    internal class PortfolioItem: IImageOwner
+    {
+	    private int _id;
+        private string _title;
+        private string _image;
         private string _description;
-        private string _url;
-        private string _video;
 
         public PortfolioItem()
         {
-            Id = PersistenceManager.NextId;
+            Category = Category.Undefined;
+            ProjectItems = new List<ProjectItem>();
         }
 
-        [JsonIgnore]
         [Browsable(false)]
-        public int Id { get; set; }
+        [JsonProperty("id")]
+        public int Id
+        {
+	        get
+	        {
+		        if (_id == 0)
+		        {
+			        _id = PersistenceManager.NextId;
+		        }
+		        return _id;
+	        }
+	        set => _id = value;
+        }
+
+        [JsonProperty("title")]
+        [DefaultValue("")]
+        public string Title
+        {
+            get => _title;
+            set => _title = value?.Trim();
+        }
 
         [JsonProperty("image")]
         [DefaultValue("")]
@@ -31,42 +60,21 @@ namespace ContentManagement
             set => _image = value?.Trim();
         }
 
-        [JsonProperty("margin")]
-        [DefaultValue(MarginConverter.DefaultMargin)]
-		[TypeConverter(typeof(MarginConverter))]
-        public string Margins
-        {
-            get => string.IsNullOrEmpty(_margin) ? MarginConverter.DefaultMargin : _margin;
-            set => _margin = value;
-        }
-
         [JsonProperty("description")]
         [DefaultValue("")]
-        [Editor(typeof(MultilineStringEditor), typeof(UITypeEditor))]
         public string Description
         {
             get => _description;
             set => _description = value?.Trim();
         }
 
-        [JsonProperty("url")]
-        [DefaultValue("")]
-        public string Url
-        {
-            get => _url;
-            set => _url = value?.Trim();
-        }
+        [JsonProperty("category")]
+        [JsonConverter(typeof(StringEnumConverter))]
+        [DefaultValue(Category.Undefined)]
+        public Category Category { get; set; }
 
-        [JsonProperty("video")]
-        [DefaultValue("")]
-        public string Video
-        {
-            get => _video;
-            set => _video = value?.Trim();
-        }
-
-        [JsonIgnore]
+        [JsonProperty("projectItems")]
         [Browsable(false)]
-        public PreviewItem Parent { get; set; }
+        public List<ProjectItem> ProjectItems { get; set; }
     }
 }
