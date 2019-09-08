@@ -14,17 +14,17 @@ namespace ContentManagement
         Undefined
     }
 
-    internal class PortfolioItem: IImageOwner
+    internal class Project: IImageOwner
     {
 	    private int _id;
         private string _title;
         private string _image;
         private string _description;
 
-        public PortfolioItem()
+        public Project()
         {
             Category = Category.Undefined;
-            ProjectItems = new List<ProjectItem>();
+            Items = new List<ProjectItem>();
         }
 
         [Browsable(false)]
@@ -73,8 +73,8 @@ namespace ContentManagement
         [DefaultValue(Category.Undefined)]
         public Category Category { get; set; }
 
-        [JsonProperty("projectItems")]
+        [JsonProperty("items")]
         [Browsable(false)]
-        public List<ProjectItem> ProjectItems { get; set; }
+        public List<ProjectItem> Items { get; set; }
     }
 }

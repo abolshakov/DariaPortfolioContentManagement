@@ -74,6 +74,6 @@ namespace ContentManagement
 
         [JsonIgnore]
         [Browsable(false)]
-        public PortfolioItem Parent { get; set; }
+        public Project Parent { get; set; }
     }
 }

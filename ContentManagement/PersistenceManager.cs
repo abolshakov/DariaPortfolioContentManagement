@@ -32,7 +32,7 @@ namespace ContentManagement
                 throw new InvalidOperationException("Cannot import items data. Invalid file format.");
 
             var arrayText = match.Groups[1];
-            var json = $"{{portfolioItems:{arrayText.Value}}}";
+            var json = $"{{projects:{arrayText.Value}}}";
             var serializer = JsonSerializer.CreateDefault();
 
             using (var textReader = new StringReader(json))
@@ -62,7 +62,7 @@ namespace ContentManagement
                 serializer.NullValueHandling = NullValueHandling.Ignore;
                 serializer.DefaultValueHandling = DefaultValueHandling.Ignore;
                 serializer.Formatting = Formatting.Indented;
-                serializer.Serialize(jsonWriter, portfolio.PortfolioItems);
+                serializer.Serialize(jsonWriter, portfolio.Projects);
 
                 content = $"{FileStart}{textWriter};\n";
             }
@@ -99,7 +99,7 @@ namespace ContentManagement
 
             string subfolder, fileName, currentImage;
 
-            if (item is PortfolioItem previewItem)
+            if (item is Project previewItem)
             {
                 currentImage = previewItem.Image;
                 subfolder = string.Empty;
@@ -129,9 +129,9 @@ namespace ContentManagement
 
         private static void ProcessCollections(Portfolio portfolio)
         {
-            foreach (var portfolioItem in portfolio.PortfolioItems)
+            foreach (var portfolioItem in portfolio.Projects)
             {
-                foreach (var projectItem in portfolioItem.ProjectItems)
+                foreach (var projectItem in portfolioItem.Items)
                 {
                     projectItem.Parent = portfolioItem;
                 }
@@ -173,24 +173,24 @@ namespace ContentManagement
             return string.IsNullOrEmpty(subfolder) ? fileName : $"{subfolder}/{fileName}";
         }
 
-        public static void RenamePreviewItemImage(PortfolioItem portfolioItem)
+        public static void RenamePreviewItemImage(Project project)
         {
-            if (string.IsNullOrEmpty(portfolioItem.Image))
+            if (string.IsNullOrEmpty(project.Image))
                 return;
 
-            portfolioItem.Image = RenameImage(portfolioItem.Image, string.Empty, CreateFileNameWithoutExtension(portfolioItem));
+            project.Image = RenameImage(project.Image, string.Empty, CreateFileNameWithoutExtension(project));
 
-            if (!portfolioItem.ProjectItems.Any())
+            if (!project.Items.Any())
                 return;
 
-            var oldValue = EvaluateChildFolderName(portfolioItem);
+            var oldValue = EvaluateChildFolderName(project);
 
             if (string.IsNullOrEmpty(oldValue))
                 return;
 
-            var newValue = CreateChildFolderName(portfolioItem);
+            var newValue = CreateChildFolderName(project);
 
-            foreach (var projectItem in portfolioItem.ProjectItems)
+            foreach (var projectItem in project.Items)
             {
                 if (string.IsNullOrEmpty(projectItem.Image))
                     continue;
@@ -210,11 +210,11 @@ namespace ContentManagement
             projectItem.Image = RenameImage(projectItem.Image, childFolder, CreateFileNameWithoutExtension(projectItem));
         }
 
-        private static string CreateFileNameWithoutExtension(PortfolioItem portfolioItem)
+        private static string CreateFileNameWithoutExtension(Project project)
         {
-            return string.IsNullOrEmpty(portfolioItem.Title)
+            return string.IsNullOrEmpty(project.Title)
               ? Guid.NewGuid().ToString().ToLower()
-              : portfolioItem.Title.ToHyphenCase();
+              : project.Title.ToHyphenCase();
         }
 
         private static string CreateFileNameWithoutExtension(ProjectItem projectItem)
@@ -224,9 +224,9 @@ namespace ContentManagement
               : projectItem.Description.ToHyphenCase();
         }
 
-        private static string EvaluateChildFolderName(PortfolioItem portfolioItem)
+        private static string EvaluateChildFolderName(Project project)
         {
-            var image = portfolioItem.ProjectItems?.FirstOrDefault(x => !string.IsNullOrEmpty(x.Image))?.Image;
+            var image = project.Items?.FirstOrDefault(x => !string.IsNullOrEmpty(x.Image))?.Image;
 
             return image?.Substring(0, image.IndexOf('/'));
         }
@@ -242,21 +242,21 @@ namespace ContentManagement
             return CreateImageName(subfolder, fileName);
         }
 
-        private static string CreateChildFolderName(PortfolioItem portfolioItem)
+        private static string CreateChildFolderName(Project project)
         {
-            return string.IsNullOrEmpty(portfolioItem.Title)
+            return string.IsNullOrEmpty(project.Title)
               ? Guid.NewGuid().ToString().ToLower()
-              : portfolioItem.Title.ToHyphenCase();
+              : project.Title.ToHyphenCase();
         }
 
-        private static string EvaluateOrCreateChildFolderName(PortfolioItem portfolioItem)
+        private static string EvaluateOrCreateChildFolderName(Project project)
         {
-            var childFolder = EvaluateChildFolderName(portfolioItem);
+            var childFolder = EvaluateChildFolderName(project);
 
             if (!string.IsNullOrEmpty(childFolder))
                 return childFolder;
 
-            childFolder = CreateChildFolderName(portfolioItem);
+            childFolder = CreateChildFolderName(project);
             Directory.CreateDirectory(Path.Combine(ImagesPath, childFolder));
 
             return childFolder;
@@ -269,9 +269,9 @@ namespace ContentManagement
             Directory.Move(oldPath, newPath);
         }
 
-        public static void DeleteChildFolder(PortfolioItem portfolioItem)
+        public static void DeleteChildFolder(Project project)
         {
-            var childFolder = EvaluateChildFolderName(portfolioItem);
+            var childFolder = EvaluateChildFolderName(project);
 
             if (string.IsNullOrEmpty(childFolder))
                 return;

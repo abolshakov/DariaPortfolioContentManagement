@@ -76,7 +76,7 @@
     <Compile Include="MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="PortfolioItem.cs" />
+    <Compile Include="Project.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProjectItem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

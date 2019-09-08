@@ -5,7 +5,7 @@ namespace ContentManagement
 {
     internal class Portfolio
     {
-        [JsonProperty("portfolioItems")]
-        public List<PortfolioItem> PortfolioItems { get; set; }
+        [JsonProperty("projects")]
+        public List<Project> Projects { get; set; }
     }
 }

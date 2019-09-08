@@ -33,12 +33,12 @@ namespace ContentManagement
 
             var imageOwnerIdByImage = new Dictionary<string, int>();
 
-            foreach (var previewItem in _portfolio.PortfolioItems)
+            foreach (var previewItem in _portfolio.Projects)
             {
                 if (!string.IsNullOrEmpty(previewItem.Image))
                     imageOwnerIdByImage.Add(previewItem.Image, previewItem.Id);
 
-                foreach (var portfolioItem in previewItem.ProjectItems)
+                foreach (var portfolioItem in previewItem.Items)
                 {
                     portfolioItem.Parent = previewItem;
 
@@ -70,7 +70,7 @@ namespace ContentManagement
         {
             var root = new TreeNode("Portfolio") { ImageKey = RootKey, SelectedImageKey = RootKey };
 
-            foreach (var previewItem in portfolio.PortfolioItems)
+            foreach (var previewItem in portfolio.Projects)
             {
                 var node = new TreeNode(
                         string.IsNullOrWhiteSpace(previewItem.Title)
@@ -78,7 +78,7 @@ namespace ContentManagement
                             : previewItem.Title)
                 { ImageKey = previewItem.Id.ToString() };
 
-                foreach (var portfolioItem in previewItem.ProjectItems)
+                foreach (var portfolioItem in previewItem.Items)
                 {
                     var subNode = new TreeNode(
                         string.IsNullOrEmpty(portfolioItem.Description)
@@ -124,7 +124,7 @@ namespace ContentManagement
             if (e.ChangedItem.PropertyDescriptor == null)
                 return;
 
-            if (e.ChangedItem.PropertyDescriptor.Name == nameof(PortfolioItem.Image))
+            if (e.ChangedItem.PropertyDescriptor.Name == nameof(Project.Image))
             {
                 UpdateTreeViewImage();
                 UpdatePictureBoxImage(GetImageOwner(treeView.SelectedNode));
@@ -149,11 +149,11 @@ namespace ContentManagement
             {
                 var previewItem = GetPreviewItem(treeView.SelectedNode);
                 var portfolioItem = new ProjectItem { Parent = previewItem };
-                previewItem.ProjectItems.Add(portfolioItem);
+                previewItem.Items.Add(portfolioItem);
             }
             else
             {
-                _portfolio.PortfolioItems.Add(new PortfolioItem());
+                _portfolio.Projects.Add(new Project());
             }
             var node = new TreeNode(Resources.MainForm_EditMe);
             treeView.SelectedNode.Nodes.Add(node);
@@ -185,9 +185,9 @@ namespace ContentManagement
             if (IsPreviewItem(node))
             {
                 var previewItem = GetPreviewItem(node);
-                var index = _portfolio.PortfolioItems.IndexOf(previewItem);
+                var index = _portfolio.Projects.IndexOf(previewItem);
 
-                foreach (var portfolioItem in previewItem.ProjectItems)
+                foreach (var portfolioItem in previewItem.Items)
                 {
                     if (string.IsNullOrEmpty(portfolioItem.Image))
                         continue;
@@ -195,7 +195,7 @@ namespace ContentManagement
                     ImageListRemoveImage(portfolioItem.Id.ToString());
                 }
 
-                _portfolio.PortfolioItems.RemoveAt(index);
+                _portfolio.Projects.RemoveAt(index);
                 ImageListRemoveImage(previewItem.Id.ToString());
                 PersistenceManager.DeleteImage(previewItem.Image);
                 PersistenceManager.DeleteChildFolder(previewItem);
@@ -203,8 +203,8 @@ namespace ContentManagement
             else
             {
                 var portfolioItem = GetPortfolioItem(node);
-                var index = portfolioItem.Parent.ProjectItems.IndexOf(portfolioItem);
-                portfolioItem.Parent.ProjectItems.RemoveAt(index);
+                var index = portfolioItem.Parent.Items.IndexOf(portfolioItem);
+                portfolioItem.Parent.Items.RemoveAt(index);
                 ImageListRemoveImage(portfolioItem.Id.ToString());
                 PersistenceManager.DeleteImage(portfolioItem.Image);
             }
@@ -268,14 +268,14 @@ namespace ContentManagement
 
             switch (selectedItem)
             {
-                case PortfolioItem previewItem:
-                    index = _portfolio.PortfolioItems.IndexOf(previewItem);
-                    total = _portfolio.PortfolioItems.Count;
+                case Project previewItem:
+                    index = _portfolio.Projects.IndexOf(previewItem);
+                    total = _portfolio.Projects.Count;
                     btnAdd.Enabled = true;
                     break;
                 case ProjectItem portfolioItem:
-                    index = portfolioItem.Parent.ProjectItems.IndexOf(portfolioItem);
-                    total = portfolioItem.Parent.ProjectItems.Count;
+                    index = portfolioItem.Parent.Items.IndexOf(portfolioItem);
+                    total = portfolioItem.Parent.Items.Count;
                     btnAdd.Enabled = false;
                     break;
             }
@@ -293,21 +293,21 @@ namespace ContentManagement
             return node.Parent == treeView.Nodes[0];
         }
 
-        private PortfolioItem GetPreviewItem(TreeNode node)
+        private Project GetPreviewItem(TreeNode node)
         {
-            return _portfolio.PortfolioItems.ElementAt(node.Index);
+            return _portfolio.Projects.ElementAt(node.Index);
         }
 
         private ProjectItem GetPortfolioItem(TreeNode node)
         {
-            return GetPreviewItem(node.Parent).ProjectItems.ElementAt(node.Index);
+            return GetPreviewItem(node.Parent).Items.ElementAt(node.Index);
         }
 
         private void RenameImage(string propertyName, object oldValue)
         {
             if (IsPreviewItem(treeView.SelectedNode))
             {
-                if (propertyName != nameof(PortfolioItem.Title))
+                if (propertyName != nameof(Project.Title))
                     return;
 
                 var previewItem = GetPreviewItem(treeView.SelectedNode);
@@ -395,16 +395,16 @@ namespace ContentManagement
             if (IsPreviewItem(treeView.SelectedNode))
             {
                 var previewItem = GetPreviewItem(treeView.SelectedNode);
-                var index = _portfolio.PortfolioItems.IndexOf(previewItem);
-                _portfolio.PortfolioItems.RemoveAt(index);
-                _portfolio.PortfolioItems.Insert(index + delta, previewItem);
+                var index = _portfolio.Projects.IndexOf(previewItem);
+                _portfolio.Projects.RemoveAt(index);
+                _portfolio.Projects.Insert(index + delta, previewItem);
             }
             else
             {
                 var portfolioItem = GetPortfolioItem(treeView.SelectedNode);
-                var index = portfolioItem.Parent.ProjectItems.IndexOf(portfolioItem);
-                portfolioItem.Parent.ProjectItems.RemoveAt(index);
-                portfolioItem.Parent.ProjectItems.Insert(index + delta, portfolioItem);
+                var index = portfolioItem.Parent.Items.IndexOf(portfolioItem);
+                portfolioItem.Parent.Items.RemoveAt(index);
+                portfolioItem.Parent.Items.Insert(index + delta, portfolioItem);
             }
 
             var node = treeView.SelectedNode;
