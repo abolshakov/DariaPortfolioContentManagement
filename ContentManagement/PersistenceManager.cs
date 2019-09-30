@@ -5,6 +5,8 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace ContentManagement
@@ -16,16 +18,20 @@ namespace ContentManagement
         private static readonly string ImagesPath = Path.GetFullPath(ConfigurationManager.AppSettings["ImagesFolderPath"]);
         private static readonly string PortfolioPath = Path.GetFullPath(ConfigurationManager.AppSettings["PortfolioFilePath"]);
         private static readonly string IdsPath = Path.GetFullPath(ConfigurationManager.AppSettings["IdsFilePath"]);
+
         private static readonly Registrar Registrar = new Registrar();
 
         public static int NextId => Registrar.NextId();
+
+        public static AutoResetEvent AllDone => ImageCompressor.AllDone;
 
         public static Portfolio ImportData()
         {
             InitializeRegistrar();
 
             var content = File.ReadAllText(PortfolioPath);
-            var regEx = new Regex(FileStart + "(.+);", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            var regEx = new Regex(FileStart + "(.+);",
+                RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
             var match = regEx.Match(content);
 
             if (!match.Success)
@@ -42,7 +48,8 @@ namespace ContentManagement
                 {
                     result = serializer.Deserialize<Portfolio>(jsonReader);
                 }
-                ProcessCollections(result);
+
+                ProcessCollectionsAsync(result);
 
                 return result;
             }
@@ -105,11 +112,11 @@ namespace ContentManagement
                 subfolder = string.Empty;
                 fileName = CreateFileNameWithoutExtension(previewItem);
             }
-            else if (item is ProjectItem portfolioItem)
+            else if (item is ProjectItem projectItem)
             {
-                currentImage = portfolioItem.Image;
-                subfolder = EvaluateOrCreateChildFolderName(portfolioItem.Parent);
-                fileName = CreateFileNameWithoutExtension(portfolioItem);
+                currentImage = projectItem.Image;
+                subfolder = EvaluateOrCreateChildFolderName(projectItem.Parent);
+                fileName = CreateFileNameWithoutExtension();
             }
             else
             {
@@ -127,15 +134,44 @@ namespace ContentManagement
             return CreateImageName(subfolder, fileName);
         }
 
-        private static void ProcessCollections(Portfolio portfolio)
+        public static async Task OptimizeImages(Portfolio portfolio)
         {
-            foreach (var portfolioItem in portfolio.Projects)
-            {
-                foreach (var projectItem in portfolioItem.Items)
-                {
-                    projectItem.Parent = portfolioItem;
-                }
-            }
+	        var tasks = new List<Task>();
+
+	        foreach (var portfolioItem in portfolio.Projects)
+	        {
+		        tasks.AddRange(portfolioItem.Items.Select(projectItem => OptimizeImageAsync(projectItem.Image, false)));
+		        tasks.Add(OptimizeImageAsync(portfolioItem.Image, true));
+	        }
+
+	        await Task.WhenAll(tasks).ConfigureAwait(false);
+        }
+
+        public static async Task OptimizeImageAsync(string relativeImagePath, bool isPreview)
+        {
+	        if (string.IsNullOrEmpty(relativeImagePath))
+	        {
+		        return;
+	        }
+	        var filePath = Path.Combine(ImagesPath, relativeImagePath);
+	        var bytes = File.ReadAllBytes(filePath);
+	        var (compressed, result) = await ImageCompressor.OptimizeImageAsync(bytes, isPreview).ConfigureAwait(false);
+
+	        if (compressed)
+	        {
+		        File.WriteAllBytes(filePath, result);
+	        }
+        }
+
+        private static void ProcessCollectionsAsync(Portfolio portfolio)
+        {
+	        foreach (var portfolioItem in portfolio.Projects)
+	        {
+		        foreach (var projectItem in portfolioItem.Items)
+		        {
+			        projectItem.Parent = portfolioItem;
+		        }
+	        }
         }
 
         private static void InitializeRegistrar()
@@ -207,7 +243,7 @@ namespace ContentManagement
                 return;
 
             var childFolder = EvaluateOrCreateChildFolderName(projectItem.Parent);
-            projectItem.Image = RenameImage(projectItem.Image, childFolder, CreateFileNameWithoutExtension(projectItem));
+            projectItem.Image = RenameImage(projectItem.Image, childFolder, CreateFileNameWithoutExtension());
         }
 
         private static string CreateFileNameWithoutExtension(Project project)
@@ -217,11 +253,9 @@ namespace ContentManagement
               : project.Title.ToHyphenCase();
         }
 
-        private static string CreateFileNameWithoutExtension(ProjectItem projectItem)
+        private static string CreateFileNameWithoutExtension()
         {
-            return string.IsNullOrEmpty(projectItem.Description)
-              ? Guid.NewGuid().ToString().ToLower()
-              : projectItem.Description.ToHyphenCase();
+            return Guid.NewGuid().ToString().ToLower();
         }
 
         private static string EvaluateChildFolderName(Project project)

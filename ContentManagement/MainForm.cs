@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ContentManagement.Properties;
 
@@ -12,6 +13,8 @@ namespace ContentManagement
     {
         private const string UnknownKey = "Unknown";
         private const string RootKey = "Root";
+		
+        private readonly bool _optimizeOnStartup = bool.Parse(ConfigurationManager.AppSettings["OptimizeImagesOnStartup"]);
 
         private readonly Portfolio _portfolio;
         private int _expandLevel = 2;
@@ -98,6 +101,23 @@ namespace ContentManagement
         }
 
         #region Event Handlers
+		
+        private async void MainForm_Shown(object sender, EventArgs e)
+        {
+	        if (!_optimizeOnStartup)
+	        {
+		        return;
+	        }
+
+	        using (var optimizingForm = new WaitingForm())
+	        {
+		        optimizingForm.Show(this);
+		        Enabled = false;
+		        await PersistenceManager.OptimizeImages(_portfolio).ConfigureAwait(true);
+		        Enabled = true;
+		        optimizingForm.Close();
+	        }
+        }
 
         private void TreeView_AfterSelect(object sender, TreeViewEventArgs e)
         {
@@ -119,28 +139,38 @@ namespace ContentManagement
             UpdatePictureBoxImage(selection);
         }
 
-        private void PropertyGrid_PropertyValueChanged(object s, PropertyValueChangedEventArgs e)
+        private async Task PropertyGrid_PropertyValueChanged(object s, PropertyValueChangedEventArgs e)
         {
             if (e.ChangedItem.PropertyDescriptor == null)
                 return;
+            
+            var newValue = e.ChangedItem.Value.ToString();
+            string image = null;
 
             if (e.ChangedItem.PropertyDescriptor.Name == nameof(Project.Image))
             {
                 UpdateTreeViewImage();
                 UpdatePictureBoxImage(GetImageOwner(treeView.SelectedNode));
-
-                if (string.IsNullOrEmpty(e.ChangedItem.Value.ToString()))
+                
+                if (string.IsNullOrEmpty(newValue))
                 {
                     PersistenceManager.DeleteImage(e.OldValue.ToString());
                 }
+
+                image = newValue;
             }
             else
             {
-                RenameImage(e.ChangedItem.PropertyDescriptor.Name, e.OldValue);
+                EnsureImageName(e.ChangedItem.PropertyDescriptor.Name, e.OldValue);
             }
 
             propertyGrid.Refresh();
             PersistenceManager.ExportData(_portfolio);
+
+            if (!string.IsNullOrEmpty(image))
+            {
+	            await PersistenceManager.OptimizeImageAsync(image, IsPreviewItem(treeView.SelectedNode)).ConfigureAwait(true);
+            }
         }
 
         private void BtnAdd_Click(object sender, EventArgs e)
@@ -239,6 +269,15 @@ namespace ContentManagement
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             PersistenceManager.ExportData(_portfolio);
+			
+            using (var optimizingForm = new WaitingForm())
+            {
+	            optimizingForm.Show(this);
+	            Enabled = false;
+	            PersistenceManager.AllDone.WaitOne();
+	            Enabled = true;
+	            optimizingForm.Close();
+            }
         }
 
         #endregion
@@ -303,7 +342,7 @@ namespace ContentManagement
             return GetPreviewItem(node.Parent).Items.ElementAt(node.Index);
         }
 
-        private void RenameImage(string propertyName, object oldValue)
+        private void EnsureImageName(string propertyName, object oldValue)
         {
             if (IsPreviewItem(treeView.SelectedNode))
             {

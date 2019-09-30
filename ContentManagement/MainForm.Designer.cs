@@ -211,7 +211,7 @@ namespace ContentManagement
             this.propertyGrid.Size = new System.Drawing.Size(457, 107);
             this.propertyGrid.TabIndex = 0;
             this.propertyGrid.ToolbarVisible = false;
-            this.propertyGrid.PropertyValueChanged += new System.Windows.Forms.PropertyValueChangedEventHandler(this.PropertyGrid_PropertyValueChanged);
+            this.propertyGrid.PropertyValueChanged += async (s, e) => await this.PropertyGrid_PropertyValueChanged(s, e).ConfigureAwait(true);
             // 
             // pictureBox
             // 
@@ -235,6 +235,7 @@ namespace ContentManagement
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Portfolio Content Management";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
+            this.Shown += new System.EventHandler(this.MainForm_Shown);
             this.verticalSplitter.Panel1.ResumeLayout(false);
             this.verticalSplitter.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.verticalSplitter)).EndInit();

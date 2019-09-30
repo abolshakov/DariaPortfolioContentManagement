@@ -8,7 +8,6 @@ namespace ContentManagement
 	{
 		private int _id;
 	    private string _image;
-        private string _margin;
         private string _description;
         private string _url;
         private string _video;
@@ -36,15 +35,6 @@ namespace ContentManagement
         {
             get => _image;
             set => _image = value?.Trim();
-        }
-
-        [JsonProperty("margin")]
-        [DefaultValue(MarginConverter.DefaultMargin)]
-		[TypeConverter(typeof(MarginConverter))]
-        public string Margins
-        {
-            get => string.IsNullOrEmpty(_margin) ? MarginConverter.DefaultMargin : _margin;
-            set => _margin = value;
         }
 
         [JsonProperty("description")]
