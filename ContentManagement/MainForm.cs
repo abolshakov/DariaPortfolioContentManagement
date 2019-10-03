@@ -102,7 +102,7 @@ namespace ContentManagement
 
         #region Event Handlers
 		
-        private async void MainForm_Shown(object sender, EventArgs e)
+        private async Task MainForm_Shown(object sender, EventArgs e)
         {
 	        if (!_optimizeOnStartup)
 	        {

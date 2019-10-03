@@ -235,7 +235,7 @@ namespace ContentManagement
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Portfolio Content Management";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
-            this.Shown += new System.EventHandler(this.MainForm_Shown);
+            this.Shown += async (s, e) => await this.MainForm_Shown(s, e).ConfigureAwait(true);
             this.verticalSplitter.Panel1.ResumeLayout(false);
             this.verticalSplitter.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.verticalSplitter)).EndInit();
