@@ -18,12 +18,14 @@ namespace ContentManagement
         private static readonly string ImagesPath = Path.GetFullPath(ConfigurationManager.AppSettings["ImagesFolderPath"]);
         private static readonly string PortfolioPath = Path.GetFullPath(ConfigurationManager.AppSettings["PortfolioFilePath"]);
         private static readonly string IdsPath = Path.GetFullPath(ConfigurationManager.AppSettings["IdsFilePath"]);
+        private static readonly string CompressedIdsPath = Path.GetFullPath(ConfigurationManager.AppSettings["CompressedIdsFilePath"]);
 
         private static readonly Registrar Registrar = new Registrar();
+        private static readonly ImageCompressor Compressor = new ImageCompressor();
 
         public static int NextId => Registrar.NextId();
 
-        public static AutoResetEvent AllDone => ImageCompressor.AllDone;
+        public static AutoResetEvent AllDone => Compressor.AllDone;
 
         public static Portfolio ImportData()
         {
@@ -49,7 +51,8 @@ namespace ContentManagement
                     result = serializer.Deserialize<Portfolio>(jsonReader);
                 }
 
-                ProcessCollectionsAsync(result);
+                var loadedIds = ProcessCollectionsAsync(result);
+                InitializeImageCompressor(loadedIds);
 
                 return result;
             }
@@ -77,6 +80,7 @@ namespace ContentManagement
             File.WriteAllText(PortfolioPath, content);
 
             ExportRegistrar();
+            ExportCompressor();
         }
 
         public static string RelativeImagePath(string fullPath)
@@ -105,15 +109,18 @@ namespace ContentManagement
                 return null;
 
             string subfolder, fileName, currentImage;
+            int id;
 
             if (item is Project previewItem)
             {
+                id = previewItem.Id;
                 currentImage = previewItem.Image;
                 subfolder = string.Empty;
                 fileName = CreateFileNameWithoutExtension(previewItem);
             }
             else if (item is ProjectItem projectItem)
             {
+                id = projectItem.Id;
                 currentImage = projectItem.Image;
                 subfolder = EvaluateOrCreateChildFolderName(projectItem.Parent);
                 fileName = CreateFileNameWithoutExtension();
@@ -125,7 +132,7 @@ namespace ContentManagement
 
             if (!string.IsNullOrEmpty(currentImage))
             {
-                DeleteImage(currentImage);
+                DeleteImage(id, currentImage);
             }
             fileName += Path.GetExtension(sourcePath);
             var target = Path.Combine(ImagesPath, subfolder, fileName);
@@ -136,42 +143,47 @@ namespace ContentManagement
 
         public static async Task OptimizeImages(Portfolio portfolio)
         {
-	        var tasks = new List<Task>();
+            var tasks = new List<Task>();
 
-	        foreach (var portfolioItem in portfolio.Projects)
-	        {
-		        tasks.AddRange(portfolioItem.Items.Select(projectItem => OptimizeImageAsync(projectItem.Image, false)));
-		        tasks.Add(OptimizeImageAsync(portfolioItem.Image, true));
-	        }
+            foreach (var portfolioItem in portfolio.Projects)
+            {
+                tasks.AddRange(portfolioItem.Items.Select(projectItem => OptimizeImageAsync(projectItem.Id, projectItem.Image, false)));
+                tasks.Add(OptimizeImageAsync(portfolioItem.Id, portfolioItem.Image, true));
+            }
 
-	        await Task.WhenAll(tasks).ConfigureAwait(false);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
         }
 
-        public static async Task OptimizeImageAsync(string relativeImagePath, bool isPreview)
+        public static async Task OptimizeImageAsync(int itemId, string relativeImagePath, bool isPreview)
         {
-	        if (string.IsNullOrEmpty(relativeImagePath))
-	        {
-		        return;
-	        }
-	        var filePath = Path.Combine(ImagesPath, relativeImagePath);
-	        var bytes = File.ReadAllBytes(filePath);
-	        var (compressed, result) = await ImageCompressor.OptimizeImageAsync(bytes, isPreview).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(relativeImagePath))
+            {
+                return;
+            }
+            var filePath = Path.Combine(ImagesPath, relativeImagePath);
+            var bytes = File.ReadAllBytes(filePath);
+            var (compressed, result) = await Compressor.OptimizeImageAsync(itemId, bytes, isPreview).ConfigureAwait(false);
 
-	        if (compressed)
-	        {
-		        File.WriteAllBytes(filePath, result);
-	        }
+            if (compressed)
+            {
+                File.WriteAllBytes(filePath, result);
+            }
         }
 
-        private static void ProcessCollectionsAsync(Portfolio portfolio)
+        private static HashSet<int> ProcessCollectionsAsync(Portfolio portfolio)
         {
-	        foreach (var portfolioItem in portfolio.Projects)
-	        {
-		        foreach (var projectItem in portfolioItem.Items)
-		        {
-			        projectItem.Parent = portfolioItem;
-		        }
-	        }
+            var loadedIds = new HashSet<int>();
+            foreach (var portfolioItem in portfolio.Projects)
+            {
+                foreach (var projectItem in portfolioItem.Items)
+                {
+                    projectItem.Parent = portfolioItem;
+                    loadedIds.Add(projectItem.Id);
+                }
+                loadedIds.Add(portfolioItem.Id);
+            }
+
+            return loadedIds;
         }
 
         private static void InitializeRegistrar()
@@ -191,6 +203,25 @@ namespace ContentManagement
             }
         }
 
+        private static void InitializeImageCompressor(IEnumerable<int> loadedIds)
+        {
+            var content = File.ReadAllText(CompressedIdsPath);
+            var serializer = JsonSerializer.CreateDefault();
+
+            using (var textReader = new StringReader(content))
+            {
+                IEnumerable<int> compressed;
+                using (var jsonReader = new JsonTextReader(textReader))
+                {
+                    compressed = serializer.Deserialize<IEnumerable<int>>(jsonReader);
+                }
+
+                var verified = compressed.Intersect(loadedIds);
+
+                Compressor.RegisterIds(verified);
+            }
+        }
+
         private static void ExportRegistrar()
         {
             using (var textWriter = new StringWriter())
@@ -201,6 +232,19 @@ namespace ContentManagement
                 serializer.Serialize(jsonWriter, Registrar.RegisteredIds());
 
                 File.WriteAllText(IdsPath, textWriter.ToString());
+            }
+        }
+
+        private static void ExportCompressor()
+        {
+            using (var textWriter = new StringWriter())
+            using (var jsonWriter = new JsonTextWriter(textWriter))
+            {
+                var serializer = JsonSerializer.CreateDefault();
+                serializer.Formatting = Formatting.Indented;
+                serializer.Serialize(jsonWriter, Compressor.RegisteredIds());
+
+                File.WriteAllText(CompressedIdsPath, textWriter.ToString());
             }
         }
 
@@ -318,7 +362,7 @@ namespace ContentManagement
             }
         }
 
-        public static void DeleteImage(string relativePath)
+        public static void DeleteImage(int id, string relativePath)
         {
             if (string.IsNullOrEmpty(relativePath))
                 return;
@@ -329,6 +373,7 @@ namespace ContentManagement
             {
                 File.Delete(path);
             }
+            Compressor.RemoveId(id);
         }
     }
 }

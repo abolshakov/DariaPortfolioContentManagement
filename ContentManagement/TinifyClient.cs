@@ -39,7 +39,7 @@ namespace ContentManagement
                 {
                     SemaphoreSlim.Release();
                 }
-				Debug.WriteLine("Sending compression request.");
+				Debug.WriteLine("Sending compression request");
                 var result = await resized.ToBuffer().ConfigureAwait(false);
 
                 return result;
@@ -61,7 +61,7 @@ namespace ContentManagement
             {
                 if (--_remainingRequests >= 0)
                 {
-	                Debug.WriteLine($"Existing key used. Remaining compressions count {_remainingRequests}.");
+	                Debug.WriteLine($"Existing key used. Remaining compressions count {_remainingRequests}");
                     return;
                 }
 
@@ -76,12 +76,12 @@ namespace ContentManagement
 
                 if (--_remainingRequests >= 0)
                 {
-					Debug.WriteLine($"New key set. Remaining compressions count {_remainingRequests}.");
+					Debug.WriteLine($"New key set. Remaining compressions count {_remainingRequests}");
                     return;
                 }
             }
 
-            throw new Exception("The limit of Tinify compressions has been reached. Please add more API keys.");
+            throw new Exception("The limit of Tinify compressions has been reached. Please add more API keys");
         }
 
         private static void IncrementPending()

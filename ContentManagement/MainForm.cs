@@ -59,7 +59,7 @@ namespace ContentManagement
                     var removeOrphanImages = bool.Parse(ConfigurationManager.AppSettings["RemoveOrphanImages"]);
                     if (removeOrphanImages)
                     {
-                        PersistenceManager.DeleteImage(key);
+                        PersistenceManager.DeleteImage(0, key);
                         continue;
                     }
                     throw new InvalidOperationException(string.Format(Resources.MainForm_RedundantImageError, key));
@@ -102,7 +102,7 @@ namespace ContentManagement
 
         #region Event Handlers
 		
-        private async Task MainForm_Shown(object sender, EventArgs e)
+        private async Task MainForm_Shown()
         {
 	        if (!_optimizeOnStartup)
 	        {
@@ -139,13 +139,17 @@ namespace ContentManagement
             UpdatePictureBoxImage(selection);
         }
 
-        private async Task PropertyGrid_PropertyValueChanged(object s, PropertyValueChangedEventArgs e)
+        private async Task PropertyGrid_PropertyValueChanged(PropertyValueChangedEventArgs e)
         {
             if (e.ChangedItem.PropertyDescriptor == null)
                 return;
             
             var newValue = e.ChangedItem.Value.ToString();
             string image = null;
+            var isPreview = IsPreviewItem(treeView.SelectedNode);
+            var id = isPreview 
+	            ? GetPreviewItem(treeView.SelectedNode).Id 
+	            : GetPortfolioItem(treeView.SelectedNode).Id;
 
             if (e.ChangedItem.PropertyDescriptor.Name == nameof(Project.Image))
             {
@@ -154,7 +158,7 @@ namespace ContentManagement
                 
                 if (string.IsNullOrEmpty(newValue))
                 {
-                    PersistenceManager.DeleteImage(e.OldValue.ToString());
+                    PersistenceManager.DeleteImage(id, e.OldValue.ToString());
                 }
 
                 image = newValue;
@@ -169,7 +173,7 @@ namespace ContentManagement
 
             if (!string.IsNullOrEmpty(image))
             {
-	            await PersistenceManager.OptimizeImageAsync(image, IsPreviewItem(treeView.SelectedNode)).ConfigureAwait(true);
+	            await PersistenceManager.OptimizeImageAsync(id, image, isPreview).ConfigureAwait(true);
             }
         }
 
@@ -227,7 +231,7 @@ namespace ContentManagement
 
                 _portfolio.Projects.RemoveAt(index);
                 ImageListRemoveImage(previewItem.Id.ToString());
-                PersistenceManager.DeleteImage(previewItem.Image);
+                PersistenceManager.DeleteImage(previewItem.Id, previewItem.Image);
                 PersistenceManager.DeleteChildFolder(previewItem);
             }
             else
@@ -236,7 +240,7 @@ namespace ContentManagement
                 var index = portfolioItem.Parent.Items.IndexOf(portfolioItem);
                 portfolioItem.Parent.Items.RemoveAt(index);
                 ImageListRemoveImage(portfolioItem.Id.ToString());
-                PersistenceManager.DeleteImage(portfolioItem.Image);
+                PersistenceManager.DeleteImage(portfolioItem.Id, portfolioItem.Image);
             }
 
             node.Parent.Nodes.Remove(node);
