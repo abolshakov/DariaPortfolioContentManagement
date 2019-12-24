@@ -36,33 +36,42 @@ namespace ContentManagement
 
             var imageOwnerIdByImage = new Dictionary<string, int>();
 
-            foreach (var previewItem in _portfolio.Projects)
+            foreach (var project in _portfolio.Projects)
             {
-                if (!string.IsNullOrEmpty(previewItem.Image))
-                    imageOwnerIdByImage.Add(previewItem.Image, previewItem.Id);
+                if (!string.IsNullOrEmpty(project.Image))
+                    imageOwnerIdByImage.Add(project.Image, project.Id);
 
-                foreach (var portfolioItem in previewItem.Items)
+                foreach (var projectItem in project.Items)
                 {
-                    portfolioItem.Parent = previewItem;
+                    projectItem.Parent = project;
 
-                    if (!string.IsNullOrEmpty(portfolioItem.Image))
-                        imageOwnerIdByImage.Add(portfolioItem.Image, portfolioItem.Id);
+                    if (string.IsNullOrEmpty(projectItem.Image))
+	                    continue;
+
+                    imageOwnerIdByImage.Add(projectItem.Image, projectItem.Id);
+
+                    if (projectItem.Width == 0 || projectItem.Height == 0)
+                    {
+	                    using (var image = PersistenceManager.LoadImage(projectItem.Image))
+	                    {
+		                    projectItem.UpdateImageSize(image.Size);
+	                    }
+                    }
                 }
             }
 
-            foreach (var imagePath in PersistenceManager.GetAllImages())
+            var removeOrphanImages = bool.Parse(ConfigurationManager.AppSettings["RemoveOrphanImages"]);
+
+			foreach (var imagePath in PersistenceManager.GetAllImages())
             {
                 var key = PersistenceManager.RelativeImagePath(imagePath).Replace("\\", "/");
 
                 if (!imageOwnerIdByImage.TryGetValue(key, out var ownerId))
                 {
-                    var removeOrphanImages = bool.Parse(ConfigurationManager.AppSettings["RemoveOrphanImages"]);
-                    if (removeOrphanImages)
-                    {
-                        PersistenceManager.DeleteImage(0, key);
-                        continue;
-                    }
-                    throw new InvalidOperationException(string.Format(Resources.MainForm_RedundantImageError, key));
+	                if (!removeOrphanImages)
+		                throw new InvalidOperationException(string.Format(Resources.MainForm_RedundantImageError, key));
+
+	                PersistenceManager.DeleteImage(0, key);
                 }
 
                 ImageListAdd(imagePath, ownerId.ToString());
@@ -148,17 +157,21 @@ namespace ContentManagement
             string image = null;
             var isPreview = IsPreviewItem(treeView.SelectedNode);
             var id = isPreview 
-	            ? GetPreviewItem(treeView.SelectedNode).Id 
-	            : GetPortfolioItem(treeView.SelectedNode).Id;
+	            ? GetProject(treeView.SelectedNode).Id 
+	            : GetProjectItem(treeView.SelectedNode).Id;
 
             if (e.ChangedItem.PropertyDescriptor.Name == nameof(Project.Image))
             {
                 UpdateTreeViewImage();
-                UpdatePictureBoxImage(GetImageOwner(treeView.SelectedNode));
+                var size = UpdatePictureBoxImage(GetImageOwner(treeView.SelectedNode));
                 
                 if (string.IsNullOrEmpty(newValue))
                 {
                     PersistenceManager.DeleteImage(id, e.OldValue.ToString());
+                }
+                else if(!isPreview)
+                {
+					GetProjectItem(treeView.SelectedNode).UpdateImageSize(size);
                 }
 
                 image = newValue;
@@ -181,7 +194,7 @@ namespace ContentManagement
         {
             if (IsPreviewItem(treeView.SelectedNode))
             {
-                var previewItem = GetPreviewItem(treeView.SelectedNode);
+                var previewItem = GetProject(treeView.SelectedNode);
                 var portfolioItem = new ProjectItem { Parent = previewItem };
                 previewItem.Items.Add(portfolioItem);
             }
@@ -218,7 +231,7 @@ namespace ContentManagement
 
             if (IsPreviewItem(node))
             {
-                var previewItem = GetPreviewItem(node);
+                var previewItem = GetProject(node);
                 var index = _portfolio.Projects.IndexOf(previewItem);
 
                 foreach (var portfolioItem in previewItem.Items)
@@ -236,7 +249,7 @@ namespace ContentManagement
             }
             else
             {
-                var portfolioItem = GetPortfolioItem(node);
+                var portfolioItem = GetProjectItem(node);
                 var index = portfolioItem.Parent.Items.IndexOf(portfolioItem);
                 portfolioItem.Parent.Items.RemoveAt(index);
                 ImageListRemoveImage(portfolioItem.Id.ToString());
@@ -336,14 +349,14 @@ namespace ContentManagement
             return node.Parent == treeView.Nodes[0];
         }
 
-        private Project GetPreviewItem(TreeNode node)
+        private Project GetProject(TreeNode node)
         {
             return _portfolio.Projects.ElementAt(node.Index);
         }
 
-        private ProjectItem GetPortfolioItem(TreeNode node)
+        private ProjectItem GetProjectItem(TreeNode node)
         {
-            return GetPreviewItem(node.Parent).Items.ElementAt(node.Index);
+            return GetProject(node.Parent).Items.ElementAt(node.Index);
         }
 
         private void EnsureImageName(string propertyName, object oldValue)
@@ -353,7 +366,7 @@ namespace ContentManagement
                 if (propertyName != nameof(Project.Title))
                     return;
 
-                var previewItem = GetPreviewItem(treeView.SelectedNode);
+                var previewItem = GetProject(treeView.SelectedNode);
 
                 if (previewItem.Title.Equals(oldValue))
                     return;
@@ -366,12 +379,12 @@ namespace ContentManagement
                 if (propertyName != nameof(ProjectItem.Description))
                     return;
 
-                var portfolioItem = GetPortfolioItem(treeView.SelectedNode);
+                var portfolioItem = GetProjectItem(treeView.SelectedNode);
 
                 if (portfolioItem.Description.Equals(oldValue))
                     return;
 
-                PersistenceManager.RenamePortfolioItemImage(portfolioItem);
+                PersistenceManager.RenameProjectItemImage(portfolioItem);
                 treeView.SelectedNode.Text = portfolioItem.Description;
             }
         }
@@ -379,15 +392,15 @@ namespace ContentManagement
         private IImageOwner GetImageOwner(TreeNode node)
         {
 	        return IsPreviewItem(node)
-		        ? (IImageOwner)GetPreviewItem(node)
-		        : GetPortfolioItem(node);
+		        ? (IImageOwner)GetProject(node)
+		        : GetProjectItem(node);
         }
 
         private void UpdateTreeViewImage()
         {
             var owner = IsPreviewItem(treeView.SelectedNode)
-                ? (IImageOwner)GetPreviewItem(treeView.SelectedNode)
-                : GetPortfolioItem(treeView.SelectedNode);
+                ? (IImageOwner)GetProject(treeView.SelectedNode)
+                : GetProjectItem(treeView.SelectedNode);
 
             var key = owner.Id.ToString();
             ImageListRemoveImage(key);
@@ -404,7 +417,7 @@ namespace ContentManagement
             treeView.SelectedNode.SelectedImageKey = key;
         }
 
-        private void UpdatePictureBoxImage(IImageOwner imageOwner = null)
+        private Size UpdatePictureBoxImage(IImageOwner imageOwner = null)
         {
 	        if (pictureBox.Image != null)
 	        {
@@ -413,11 +426,12 @@ namespace ContentManagement
 	        }
 
 	        if (imageOwner==null || string.IsNullOrEmpty(imageOwner.Image))
-		        return;
+		        return Size.Empty;
 
 	        using (var image = PersistenceManager.LoadImage(imageOwner.Image))
 	        {
 		        pictureBox.Image = image.ReduceToFit(pictureBox.ClientSize.Width, pictureBox.ClientSize.Height);
+		        return image.Size;
 	        }
         }
 
@@ -437,14 +451,14 @@ namespace ContentManagement
 
             if (IsPreviewItem(treeView.SelectedNode))
             {
-                var previewItem = GetPreviewItem(treeView.SelectedNode);
+                var previewItem = GetProject(treeView.SelectedNode);
                 var index = _portfolio.Projects.IndexOf(previewItem);
                 _portfolio.Projects.RemoveAt(index);
                 _portfolio.Projects.Insert(index + delta, previewItem);
             }
             else
             {
-                var portfolioItem = GetPortfolioItem(treeView.SelectedNode);
+                var portfolioItem = GetProjectItem(treeView.SelectedNode);
                 var index = portfolioItem.Parent.Items.IndexOf(portfolioItem);
                 portfolioItem.Parent.Items.RemoveAt(index);
                 portfolioItem.Parent.Items.Insert(index + delta, portfolioItem);

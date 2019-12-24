@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Drawing;
 using System.Drawing.Design;
 using Newtonsoft.Json;
 
@@ -62,8 +63,24 @@ namespace ContentManagement
             set => _video = value?.Trim();
         }
 
-        [JsonIgnore]
+        [JsonProperty("width")]
+        [DefaultValue(0)]
+        [Browsable(false)]
+		public int Width { get; set; }
+
+        [JsonProperty("height")]
+        [DefaultValue(0)]
+        [Browsable(false)]
+		public int Height { get; set; }
+
+		[JsonIgnore]
         [Browsable(false)]
         public Project Parent { get; set; }
-    }
+
+        public void UpdateImageSize(Size size)
+        {
+	        Width = size.Width;
+	        Height = size.Height;
+        }
+	}
 }

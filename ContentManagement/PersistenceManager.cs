@@ -170,7 +170,7 @@ namespace ContentManagement
             }
         }
 
-        private static HashSet<int> ProcessCollectionsAsync(Portfolio portfolio)
+		private static IEnumerable<int> ProcessCollectionsAsync(Portfolio portfolio)
         {
             var loadedIds = new HashSet<int>();
             foreach (var portfolioItem in portfolio.Projects)
@@ -281,7 +281,7 @@ namespace ContentManagement
             RenameFolder(oldValue, newValue);
         }
 
-        public static void RenamePortfolioItemImage(ProjectItem projectItem)
+        public static void RenameProjectItemImage(ProjectItem projectItem)
         {
             if (string.IsNullOrEmpty(projectItem.Image))
                 return;
