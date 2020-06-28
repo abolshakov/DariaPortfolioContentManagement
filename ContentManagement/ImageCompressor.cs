@@ -43,10 +43,10 @@ namespace ContentManagement
 	        return _compressed;
         }
 
-        public async Task<(bool Compressed, byte[] Bytes)> OptimizeImageAsync(int itemId, byte[] bytes, bool isPreview)
+        public async Task<(bool Compressed, byte[] Bytes)> OptimizeImageAsync(int itemId, byte[] bytes, bool isPreview, bool force = false)
         {
 			Debug.WriteLine($"Optimize Image {itemId}...");
-	        if (_compressed.Contains(itemId))
+	        if (!force && _compressed.Contains(itemId))
 	        {
 		        Debug.WriteLine($"...image {itemId} already compressed");
 		        return (false, bytes);

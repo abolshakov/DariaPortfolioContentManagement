@@ -154,7 +154,7 @@ namespace ContentManagement
             await Task.WhenAll(tasks).ConfigureAwait(false);
         }
 
-        public static async Task OptimizeImageAsync(int itemId, string relativeImagePath, bool isPreview)
+        public static async Task OptimizeImageAsync(int itemId, string relativeImagePath, bool isPreview, bool force = false)
         {
             if (string.IsNullOrEmpty(relativeImagePath))
             {
@@ -162,7 +162,7 @@ namespace ContentManagement
             }
             var filePath = Path.Combine(ImagesPath, relativeImagePath);
             var bytes = File.ReadAllBytes(filePath);
-            var (compressed, result) = await Compressor.OptimizeImageAsync(itemId, bytes, isPreview).ConfigureAwait(false);
+            var (compressed, result) = await Compressor.OptimizeImageAsync(itemId, bytes, isPreview, force).ConfigureAwait(false);
 
             if (compressed)
             {

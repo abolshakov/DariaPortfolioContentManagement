@@ -159,6 +159,7 @@ namespace ContentManagement
             var id = isPreview 
 	            ? GetProject(treeView.SelectedNode).Id 
 	            : GetProjectItem(treeView.SelectedNode).Id;
+            var imageReplaced = false;
 
             if (e.ChangedItem.PropertyDescriptor.Name == nameof(Project.Image))
             {
@@ -173,7 +174,9 @@ namespace ContentManagement
                 {
 					GetProjectItem(treeView.SelectedNode).UpdateImageSize(size);
                 }
+                var oldValue = e.OldValue as string;
 
+                imageReplaced = string.Equals(oldValue, newValue, StringComparison.OrdinalIgnoreCase);
                 image = newValue;
             }
             else
@@ -186,7 +189,7 @@ namespace ContentManagement
 
             if (!string.IsNullOrEmpty(image))
             {
-	            await PersistenceManager.OptimizeImageAsync(id, image, isPreview).ConfigureAwait(true);
+	            await PersistenceManager.OptimizeImageAsync(id, image, isPreview, imageReplaced).ConfigureAwait(true);
             }
         }
 
